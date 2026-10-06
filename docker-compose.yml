@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # 1. Сервис приложения
+  web:
+    build:
+      context: ./app
+      network: host  # Используем host-сеть для сборки, чтобы обойти сетевой фильтр
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    networks:
+      - lab-network
+  
+  # 2. База данных Redis
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - lab-network
+
+  # 3. Реверс прокси нджинкс
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8888:80" # На хосте открываем 8888, внутри нджинкс слушает 80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+    networks:
+      - lab-network
+
+# Именованный том для сохранения данных базы
+volumes:
+  redis_data:
+
+# Изолированная сеть для общения контейнеров
+networks:
+  lab-network:
+    driver: bridge
